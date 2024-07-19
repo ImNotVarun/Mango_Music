@@ -12,6 +12,7 @@ import FavoritesScreen from './src/screens/FavoritesScreen';
 import PlayerScreen from './src/screens/player';
 
 const Tab = createBottomTabNavigator();
+const TAB_BAR_HEIGHT = 50; // Adjust this value based on your actual tab bar height
 
 const App = () => {
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
@@ -20,33 +21,40 @@ const App = () => {
     <SafeAreaProvider>
       <NavigationContainer>
         <View style={styles.container}>
-          {!isPlayerExpanded && (
-            <Tab.Navigator
-              screenOptions={({ route }) => ({
-                tabBarIcon: ({ color, size }) => {
-                  let iconName: 'home' | 'search' | 'heart' = 'home';
-                  if (route.name === 'Home') {
+          <Tab.Navigator
+            screenOptions={({ route }) => ({
+              tabBarIcon: ({ color, size }) => {
+                let iconName: string;
+
+                switch (route.name) {
+                  case 'Home':
                     iconName = 'home';
-                  } else if (route.name === 'Search') {
+                    break;
+                  case 'Search':
                     iconName = 'search';
-                  } else if (route.name === 'Favorites') {
+                    break;
+                  case 'Favorites':
                     iconName = 'heart';
-                  }
-                  return <FontAwesome name={iconName} size={size} color={color} />;
-                },
-                tabBarActiveTintColor: '#FF3B30',
-                tabBarInactiveTintColor: 'gray',
-                tabBarShowLabel: false,
-              })}
-            >
-              <Tab.Screen name="Home" component={HomeScreen} />
-              <Tab.Screen name="Search" component={SearchScreen} />
-              <Tab.Screen name="Favorites" component={FavoritesScreen} />
-            </Tab.Navigator>
-          )}
+                    break;
+                  default:
+                    iconName = 'home'; // default icon
+                }
+
+                return <FontAwesome name={iconName as any} size={size} color={color} />;
+              },
+              tabBarActiveTintColor: '#FF3B30',
+              tabBarInactiveTintColor: 'gray',
+              tabBarShowLabel: false,
+            })}
+          >
+            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen name="Search" component={SearchScreen} />
+            <Tab.Screen name="Favorites" component={FavoritesScreen} />
+          </Tab.Navigator>
           <PlayerScreen
             isExpanded={isPlayerExpanded}
             setIsExpanded={setIsPlayerExpanded}
+            tabBarHeight={TAB_BAR_HEIGHT} // Pass the tab bar height
           />
         </View>
       </NavigationContainer>

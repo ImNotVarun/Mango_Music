@@ -1,100 +1,108 @@
-import React, { useState, useRef } from 'react';
-import PropTypes from 'prop-types';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated, PanResponder } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import React, { useRef, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, PanResponder } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons'; // Removed MaterialIcons import
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 const albumSize = width - 80;
-const miniPlayerHeight = 90;
-const TAB_BAR_HEIGHT = 50; // Adjust based on your actual tab bar height
+const miniPlayerHeight = 60;
 
-const PlayerScreen = ({ isExpanded, setIsExpanded }) => {
+const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
     const insets = useSafeAreaInsets();
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [isMiniPlayer, setIsMiniPlayer] = useState(false);
-    const animation = useRef(new Animated.Value(0)).current;
+    const animation = useRef(new Animated.Value(isExpanded ? 0 : height - miniPlayerHeight)).current;
+    const imageSize = useRef(new Animated.Value(isExpanded ? albumSize : 50)).current;
+    const imagePositionX = useRef(new Animated.Value(isExpanded ? 0 : 20)).current;
 
     const panResponder = useRef(
         PanResponder.create({
-            onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 20,
-            onPanResponderMove: (_, gestureState) => {
-                const newValue = isMiniPlayer
-                    ? Math.max(0, height - miniPlayerHeight - insets.bottom - TAB_BAR_HEIGHT + gestureState.dy)
-                    : Math.max(0, gestureState.dy);
-                animation.setValue(newValue);
-            },
-            onPanResponderRelease: (_, gestureState) => {
-                if (isMiniPlayer && gestureState.dy < -50) {
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderRelease: (e, gestureState) => {
+                if (gestureState.dy < -50) {
                     expandPlayer();
-                } else if (!isMiniPlayer && gestureState.dy > 50) {
+                } else if (gestureState.dy > 50) {
                     minimizePlayer();
-                } else {
-                    resetPosition();
                 }
             },
         })
     ).current;
 
-    const animatePlayer = (toValue) => {
+    const animatePlayer = useCallback((toValue) => {
         Animated.spring(animation, {
             toValue,
             useNativeDriver: false,
             tension: 40,
             friction: 8,
-        }).start(() => setIsMiniPlayer(toValue !== 0));
-    };
+        }).start();
+    }, [animation]);
 
-    const minimizePlayer = () => animatePlayer(height - miniPlayerHeight - insets.bottom - TAB_BAR_HEIGHT);
-    const expandPlayer = () => animatePlayer(0);
-    const resetPosition = () => animatePlayer(isMiniPlayer ? height - miniPlayerHeight - insets.bottom - TAB_BAR_HEIGHT : 0);
+    const animateImage = useCallback((toSize, toX) => {
+        Animated.parallel([
+            Animated.spring(imageSize, {
+                toValue: toSize,
+                useNativeDriver: false,
+            }).start(),
+            Animated.spring(imagePositionX, {
+                toValue: toX,
+                useNativeDriver: false,
+            }).start(),
+        ]);
+    }, [imageSize, imagePositionX]);
 
-    const interpolate = (outputRange) =>
+    const minimizePlayer = useCallback(() => {
+        animatePlayer(height - miniPlayerHeight - insets.bottom - tabBarHeight);
+        animateImage(50, 20);
+        setIsExpanded(false);
+    }, [animatePlayer, animateImage, height, insets.bottom, tabBarHeight]);
+
+    const expandPlayer = useCallback(() => {
+        animatePlayer(0);
+        animateImage(albumSize, 0);
+        setIsExpanded(true);
+    }, [animatePlayer, animateImage, albumSize]);
+
+    const interpolate = useCallback((outputRange) =>
         animation.interpolate({
-            inputRange: [0, height - miniPlayerHeight - insets.bottom - TAB_BAR_HEIGHT],
+            inputRange: [0, height - miniPlayerHeight - insets.bottom - tabBarHeight],
             outputRange,
             extrapolate: 'clamp',
-        });
+        }), [animation, height, miniPlayerHeight, insets.bottom, tabBarHeight]);
 
-    const containerHeight = interpolate([height - insets.bottom - TAB_BAR_HEIGHT, miniPlayerHeight]);
-    const albumArtSize = interpolate([albumSize, 80]);
-    const albumArtPosition = interpolate([0, -120]);
-    const albumArtMarginTop = interpolate([40, 7]);
-    const opacity = interpolate([1, 1]);
-    const albumNamePosition = interpolate([0, -90]);
-    const artistNamePosition = interpolate([0, -95]);
-    const playPauseButtonPositionX = interpolate([0, 120]);
-    const playPauseButtonPositionY = interpolate([0, -239]);
-    const playPauseButtonScale = interpolate([1, 0.7]);
-    const miniPlayerTextOpacity = interpolate([0, 1]);
+    const containerHeight = interpolate([height, miniPlayerHeight]);
+    const albumArtSize = imageSize;
+    const albumArtMarginTop = interpolate([60, 5]);
+    const mainPlayerOpacity = interpolate([1, 0]);
+    const miniPlayerOpacity = interpolate([0, 1]);
+
+    const togglePlayPause = () => {
+        setIsPlaying(prev => !prev);
+    };
 
     return (
         <Animated.View
-            style={[styles.container, { height: containerHeight, bottom: insets.bottom + TAB_BAR_HEIGHT }]}
             {...panResponder.panHandlers}
+            style={[styles.container, { height: containerHeight, bottom: insets.bottom + tabBarHeight }]}
         >
             <LinearGradient
                 colors={['#ff6e7f', '#000000']}
                 style={StyleSheet.absoluteFill}
             >
-                <Animated.Image
-                    source={{ uri: 'https://source.boomplaymusic.com/group10/M00/05/19/dd05de98d8644a4a83f635cbdc61e279_464_464.webp' }}
-                    style={[styles.albumArt, { width: albumArtSize, height: albumArtSize, left: albumArtPosition, marginTop: albumArtMarginTop }]}
-                />
-
-                <Animated.View style={[styles.songInfoContainer, { opacity }]}>
-                    <Animated.Text style={[styles.title, { transform: [{ translateY: albumNamePosition }], opacity }]}>
-                        Liability
-                    </Animated.Text>
-                    <Animated.Text style={[styles.artist, { transform: [{ translateY: artistNamePosition }], opacity }]}>
-                        Lorde
-                    </Animated.Text>
-                </Animated.View>
-
-                <Animated.View style={[styles.progressContainer, { opacity }]}>
+                {/* Main Player */}
+                <Animated.View style={[styles.mainPlayer, { opacity: mainPlayerOpacity }]}>
+                    <Animated.Image
+                        source={{ uri: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' }}
+                        style={[styles.albumArt, {
+                            width: albumArtSize,
+                            height: albumArtSize,
+                            marginTop: albumArtMarginTop,
+                            transform: [{ translateX: imagePositionX }]
+                        }]}
+                    />
+                    <Text style={styles.title}>Song Title</Text>
+                    <Text style={styles.artist}>Artist Name</Text>
                     <Slider
                         style={styles.progressBar}
                         minimumValue={0}
@@ -107,48 +115,38 @@ const PlayerScreen = ({ isExpanded, setIsExpanded }) => {
                     />
                     <View style={styles.timeContainer}>
                         <Text style={styles.timeText}>0:00</Text>
-                        <Text style={styles.timeText}>2:42</Text>
+                        <Text style={styles.timeText}>3:30</Text>
                     </View>
-                </Animated.View>
-
-                <Animated.View style={[styles.controls, { opacity }]}>
-                    <TouchableOpacity>
-                        <FontAwesome name="step-backward" size={32} color="white" />
-                    </TouchableOpacity>
-                    <Animated.View style={{
-                        transform: [
-                            { translateX: playPauseButtonPositionX },
-                            { translateY: playPauseButtonPositionY },
-                            { scale: playPauseButtonScale }
-                        ]
-                    }}>
-                        <TouchableOpacity onPress={() => setIsPlaying(!isPlaying)} style={styles.playPauseButton}>
-                            <FontAwesome name={isPlaying ? "pause" : "play"} size={64} color="white" />
+                    <View style={styles.controls}>
+                        <TouchableOpacity>
+                            <FontAwesome name="step-backward" size={32} color="white" />
                         </TouchableOpacity>
-                    </Animated.View>
-                    <TouchableOpacity>
-                        <FontAwesome name="step-forward" size={32} color="white" />
-                    </TouchableOpacity>
+                        <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
+                            <FontAwesome name={isPlaying ? "pause" : "play"} size={32} color="white" />
+                        </TouchableOpacity>
+                        <TouchableOpacity>
+                            <FontAwesome name="step-forward" size={32} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </Animated.View>
 
-                <Animated.View style={[styles.miniPlayer, { opacity: Animated.subtract(1, opacity) }]}>
-                    <View style={styles.miniPlayerContent}>
-                        <Animated.Text style={[styles.miniTitle, { opacity: miniPlayerTextOpacity }]}>
-                            Liability
-                        </Animated.Text>
-                        <Animated.Text style={[styles.miniArtist, { opacity: miniPlayerTextOpacity }]}>
-                            Lorde
-                        </Animated.Text>
+                {/* Mini Player */}
+                <Animated.View style={[styles.miniPlayer, { opacity: miniPlayerOpacity }]}>
+                    <Image
+                        source={{ uri: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' }}
+                        style={styles.miniAlbumArt}
+                    />
+                    <View style={styles.miniInfo}>
+                        <Text style={styles.miniTitle}>Song Title</Text>
+                        <Text style={styles.miniArtist}>Artist Name</Text>
                     </View>
+                    <TouchableOpacity onPress={togglePlayPause}>
+                        <FontAwesome name={isPlaying ? "pause" : "play"} size={24} color="white" />
+                    </TouchableOpacity>
                 </Animated.View>
             </LinearGradient>
         </Animated.View>
     );
-};
-
-PlayerScreen.propTypes = {
-    isExpanded: PropTypes.bool.isRequired,
-    setIsExpanded: PropTypes.func.isRequired,
 };
 
 const styles = StyleSheet.create({
@@ -157,80 +155,76 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
     },
-    albumArt: {
-        alignSelf: 'center',
-        borderRadius: 20,
-    },
-    songInfoContainer: {
+    mainPlayer: {
+        flex: 1,
         alignItems: 'center',
-        marginVertical: 20,
+        justifyContent: 'center',
+    },
+    albumArt: {
+        borderRadius: 10,
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
-        textAlign: 'center',
+        marginTop: 20,
     },
     artist: {
         fontSize: 18,
-        color: '#888',
+        color: '#ccc',
         marginTop: 5,
-        textAlign: 'center',
-    },
-    progressContainer: {
-        width: '100%',
-        marginBottom: 10,
-        paddingHorizontal: 20,
     },
     progressBar: {
-        width: '100%',
-        height: 20,
+        width: width - 40,
+        marginTop: 30,
     },
     timeContainer: {
+        width: width - 40,
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginTop: 5,
     },
     timeText: {
-        color: '#888',
+        color: '#ccc',
     },
     controls: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
         alignItems: 'center',
-        marginVertical: 20,
+        justifyContent: 'space-around',
+        width: width - 80,
+        marginTop: 30,
     },
     playPauseButton: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
+        width: 64,
+        height: 64,
+        borderRadius: 32,
         backgroundColor: '#FF3B30',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     miniPlayer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: miniPlayerHeight,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        backgroundColor: '#000',
+        height: miniPlayerHeight,
     },
-    miniPlayerContent: {
+    miniAlbumArt: {
+        width: 50,
+        height: 50,
+        borderRadius: 5,
+    },
+    miniInfo: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        marginLeft: 15,
     },
     miniTitle: {
-        fontSize: 18,
         color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     miniArtist: {
+        color: '#ccc',
         fontSize: 14,
-        color: '#888',
-        marginTop: 3,
     },
 });
 
