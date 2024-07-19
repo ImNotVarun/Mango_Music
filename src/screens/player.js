@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, PanResponder } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons'; // Removed MaterialIcons import
+import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,12 +89,12 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                 {
                     height: containerHeight,
                     bottom: isExpanded ? 0 : insets.bottom + tabBarHeight,
-                    zIndex: isExpanded ? 1000 : 1, // Ensure it's above other components
+                    zIndex: isExpanded ? 1000 : 1,
                 }
             ]}
         >
             <LinearGradient
-                colors={['#ff6e7f', '#000000']}
+                colors={['#1E1E1E', '#121212']}
                 style={StyleSheet.absoluteFill}
             >
                 {/* Main Player */}
@@ -108,33 +108,36 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                             transform: [{ translateX: imagePositionX }]
                         }]}
                     />
-                    <Text style={styles.title}>Song Title</Text>
-                    <Text style={styles.artist}>Artist Name</Text>
+                    <Text style={styles.title}>The Perfect Girl</Text>
+                    <Text style={styles.artist}>patrick bateman</Text>
                     <Slider
                         style={styles.progressBar}
                         minimumValue={0}
                         maximumValue={1}
                         value={progress}
                         onValueChange={setProgress}
-                        minimumTrackTintColor="#FF3B30"
-                        maximumTrackTintColor="#FFFFFF"
-                        thumbTintColor="#FF3B30"
+                        minimumTrackTintColor="#1DB954"
+                        maximumTrackTintColor="#555"
+                        thumbTintColor="#1DB954"
                     />
                     <View style={styles.timeContainer}>
                         <Text style={styles.timeText}>0:00</Text>
                         <Text style={styles.timeText}>3:30</Text>
                     </View>
-                    <View style={styles.controls}>
-                        <TouchableOpacity>
-                            <FontAwesome name="step-backward" size={32} color="white" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
-                            <FontAwesome name={isPlaying ? "pause" : "play"} size={32} color="white" />
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                            <FontAwesome name="step-forward" size={32} color="white" />
-                        </TouchableOpacity>
-                    </View>
+                    {/* Conditionally render play/pause button */}
+                    {isExpanded && (
+                        <View style={styles.controls}>
+                            <TouchableOpacity>
+                                <Ionicons name="play-skip-back" size={32} color="white" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
+                                <Ionicons name={isPlaying ? "pause" : "play"} size={32} color="white" />
+                            </TouchableOpacity>
+                            <TouchableOpacity>
+                                <Ionicons name="play-skip-forward" size={32} color="white" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </Animated.View>
 
                 {/* Mini Player */}
@@ -144,11 +147,11 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                         style={styles.miniAlbumArt}
                     />
                     <View style={styles.miniInfo}>
-                        <Text style={styles.miniTitle}>Song Title</Text>
-                        <Text style={styles.miniArtist}>Artist Name</Text>
+                        <Text style={styles.miniTitle}>The Perfect Girl</Text>
+                        <Text style={styles.miniArtist}>patrick bateman</Text>
                     </View>
                     <TouchableOpacity onPress={togglePlayPause}>
-                        <FontAwesome name={isPlaying ? "pause" : "play"} size={24} color="white" />
+                        <Ionicons name={isPlaying ? "pause" : "play"} size={24} color="white" />
                     </TouchableOpacity>
                 </Animated.View>
             </LinearGradient>
@@ -168,7 +171,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     albumArt: {
-        borderRadius: 10,
+        borderRadius: 30,
     },
     title: {
         fontSize: 24,
@@ -178,7 +181,7 @@ const styles = StyleSheet.create({
     },
     artist: {
         fontSize: 18,
-        color: '#ccc',
+        color: 'white',
         marginTop: 5,
     },
     progressBar: {
@@ -192,7 +195,7 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     timeText: {
-        color: '#ccc',
+        color: 'white',
     },
     controls: {
         flexDirection: 'row',
@@ -202,10 +205,10 @@ const styles = StyleSheet.create({
         marginTop: 30,
     },
     playPauseButton: {
+        backgroundColor: '#1DB954',
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#FF3B30',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -214,6 +217,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         height: miniPlayerHeight,
+        backgroundColor: '#121212',
     },
     miniAlbumArt: {
         width: 50,
