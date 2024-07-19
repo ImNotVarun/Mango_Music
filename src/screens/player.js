@@ -84,7 +84,14 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
     return (
         <Animated.View
             {...panResponder.panHandlers}
-            style={[styles.container, { height: containerHeight, bottom: insets.bottom + tabBarHeight }]}
+            style={[
+                styles.container,
+                {
+                    height: containerHeight,
+                    bottom: isExpanded ? 0 : insets.bottom + tabBarHeight,
+                    zIndex: isExpanded ? 1000 : 1, // Ensure it's above other components
+                }
+            ]}
         >
             <LinearGradient
                 colors={['#ff6e7f', '#000000']}
