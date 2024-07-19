@@ -13,6 +13,7 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
     const insets = useSafeAreaInsets();
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
+
     const animation = useRef(new Animated.Value(isExpanded ? 0 : height - miniPlayerHeight)).current;
     const imageSize = useRef(new Animated.Value(isExpanded ? albumSize : 50)).current;
     const imagePositionX = useRef(new Animated.Value(isExpanded ? 0 : 20)).current;
@@ -73,7 +74,7 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
 
     const containerHeight = interpolate([height, miniPlayerHeight]);
     const albumArtSize = imageSize;
-    const albumArtMarginTop = interpolate([60, 5]);
+    const albumArtMarginTop = interpolate([0, 5]);
     const mainPlayerOpacity = interpolate([1, 0]);
     const miniPlayerOpacity = interpolate([0, 1]);
 
@@ -99,15 +100,23 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
             >
                 {/* Main Player */}
                 <Animated.View style={[styles.mainPlayer, { opacity: mainPlayerOpacity }]}>
-                    <Animated.Image
-                        source={{ uri: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' }}
-                        style={[styles.albumArt, {
-                            width: albumArtSize,
-                            height: albumArtSize,
-                            marginTop: albumArtMarginTop,
-                            transform: [{ translateX: imagePositionX }]
-                        }]}
-                    />
+                    <View style={styles.albumContainer}>
+                        <Animated.Image
+                            source={{ uri: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' }}
+                            style={[styles.albumArt, {
+                                width: albumArtSize,
+                                height: albumArtSize,
+                                marginTop: albumArtMarginTop,
+                                transform: [{ translateX: imagePositionX }]
+                            }]}
+                        />
+                        <TouchableOpacity style={styles.loopIcon}>
+                            <Ionicons name="repeat" size={32} color="white" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.likeIcon}>
+                            <Ionicons name="heart" size={32} color="white" />
+                        </TouchableOpacity>
+                    </View>
                     <Text style={styles.title}>The Perfect Girl</Text>
                     <Text style={styles.artist}>patrick bateman</Text>
                     <Slider
@@ -170,8 +179,23 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    albumContainer: {
+        position: 'relative',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
     albumArt: {
         borderRadius: 30,
+    },
+    loopIcon: {
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
+    },
+    likeIcon: {
+        position: 'absolute',
+        bottom: 10,
+        right: 10,
     },
     title: {
         fontSize: 24,
