@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { FontAwesome } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 // Import your screens
 import HomeScreen from './src/screens/HomeScreen';
@@ -21,6 +22,7 @@ const App = () => {
     <SafeAreaProvider>
       <NavigationContainer>
         <View style={styles.container}>
+          <StatusBar style="light" backgroundColor="#FF3B30" />
           <Tab.Navigator
             screenOptions={({ route }) => ({
               tabBarIcon: ({ color, size }) => {
@@ -42,19 +44,42 @@ const App = () => {
 
                 return <FontAwesome name={iconName as any} size={size} color={color} />;
               },
-              tabBarActiveTintColor: '#FF3B30',
+              tabBarActiveTintColor: route.name === 'Home' ? '#FF3B30' : '#FF6F61',
               tabBarInactiveTintColor: 'gray',
+              tabBarStyle: {
+                backgroundColor: '#000000',
+                borderTopWidth: 0,
+              },
               tabBarShowLabel: false,
+              headerStyle: {
+                backgroundColor: '#FF3B30',
+              },
+              headerTintColor: '#fff',
+              headerTitleStyle: {
+                fontWeight: 'bold',
+              },
             })}
           >
-            <Tab.Screen name="Home" component={HomeScreen} />
+            <Tab.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{
+                headerStyle: {
+                  backgroundColor: '#FF3B30',
+                },
+                headerTintColor: '#fff',
+                headerTitleStyle: {
+                  fontWeight: 'bold',
+                },
+              }}
+            />
             <Tab.Screen name="Search" component={SearchScreen} />
             <Tab.Screen name="Favorites" component={FavoritesScreen} />
           </Tab.Navigator>
           <PlayerScreen
             isExpanded={isPlayerExpanded}
             setIsExpanded={setIsPlayerExpanded}
-            tabBarHeight={TAB_BAR_HEIGHT} // Pass the tab bar height
+            tabBarHeight={TAB_BAR_HEIGHT}
           />
         </View>
       </NavigationContainer>
