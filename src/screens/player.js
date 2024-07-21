@@ -37,9 +37,9 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                 } else if (gestureState.dy > 50) {
                     minimizePlayer();
                 }
-                if (gestureState.dx > 50) {
+                if (gestureState.dx > 100) {
                     previousSong();
-                } else if (gestureState.dx < -50) {
+                } else if (gestureState.dx < -100) {
                     nextSong();
                 }
             },
