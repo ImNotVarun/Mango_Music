@@ -8,10 +8,10 @@ const { width, height } = Dimensions.get('window');
 const FavoritesScreen = () => {
     return (
         <LinearGradient
-            colors={['#FF3B30', '#121212']} // Black gradient colors
+            colors={['#17153B', '#2E236C']} // Updated gradient colors
             style={styles.container}
         >
-            <StatusBar style="light" backgroundColor="#000000" />
+            <StatusBar style="light" backgroundColor="#17153B" />
             <View style={styles.content}>
                 <Text style={styles.title}>Favorites Screen</Text>
                 {/* Add your other components here */}

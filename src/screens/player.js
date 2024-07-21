@@ -1,22 +1,31 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Image, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 const albumSize = width - 80;
 const miniPlayerHeight = 60;
 
+const songs = [
+    { id: '1', title: 'The Perfect Girl', artist: 'patrick bateman', image: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' },
+    { id: '2', title: 'Song 2', artist: 'Artist 2', image: 'https://tse4.mm.bing.net/th?id=OIP.yQjTb5-bTqsSiAU9lmhyqAHaHa&pid=15.1' },
+    { id: '3', title: 'Song 3', artist: 'Artist 3', image: 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/f8/11/27/f8112775-b320-2f77-b5de-a2d2139c0237/689690360221.jpg/316x316bb.webp' },
+];
+
 const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
     const insets = useSafeAreaInsets();
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [currentSongIndex, setCurrentSongIndex] = useState(0);
+    const [likedSongs, setLikedSongs] = useState(new Set());
 
-    const animation = useRef(new Animated.Value(isExpanded ? 0 : height - miniPlayerHeight)).current;
-    const imageSize = useRef(new Animated.Value(isExpanded ? albumSize : 50)).current;
-    const imagePositionX = useRef(new Animated.Value(isExpanded ? 0 : 20)).current;
+    const animation = useSharedValue(isExpanded ? 0 : height - miniPlayerHeight);
+    const imageSize = useSharedValue(isExpanded ? albumSize : 50);
+    const imagePositionX = useSharedValue(isExpanded ? 0 : 20);
 
     const panResponder = useRef(
         PanResponder.create({
@@ -27,30 +36,22 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                 } else if (gestureState.dy > 50) {
                     minimizePlayer();
                 }
+                if (gestureState.dx > 50) {
+                    previousSong();
+                } else if (gestureState.dx < -50) {
+                    nextSong();
+                }
             },
         })
     ).current;
 
     const animatePlayer = useCallback((toValue) => {
-        Animated.spring(animation, {
-            toValue,
-            useNativeDriver: false,
-            tension: 40,
-            friction: 8,
-        }).start();
+        animation.value = withSpring(toValue, { damping: 15, stiffness: 90 });
     }, [animation]);
 
     const animateImage = useCallback((toSize, toX) => {
-        Animated.parallel([
-            Animated.spring(imageSize, {
-                toValue: toSize,
-                useNativeDriver: false,
-            }).start(),
-            Animated.spring(imagePositionX, {
-                toValue: toX,
-                useNativeDriver: false,
-            }).start(),
-        ]);
+        imageSize.value = withSpring(toSize, { damping: 15, stiffness: 90 });
+        imagePositionX.value = withSpring(toX, { damping: 15, stiffness: 90 });
     }, [imageSize, imagePositionX]);
 
     const minimizePlayer = useCallback(() => {
@@ -65,84 +66,109 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
         setIsExpanded(true);
     }, [animatePlayer, animateImage, albumSize]);
 
-    const interpolate = useCallback((outputRange) =>
-        animation.interpolate({
-            inputRange: [0, height - miniPlayerHeight - insets.bottom - tabBarHeight],
-            outputRange,
-            extrapolate: 'clamp',
-        }), [animation, height, miniPlayerHeight, insets.bottom, tabBarHeight]);
+    const containerHeight = useAnimatedStyle(() => ({
+        height: animation.value,
+    }));
 
-    const containerHeight = interpolate([height, miniPlayerHeight]);
-    const albumArtSize = imageSize;
-    const albumArtMarginTop = interpolate([0, 5]);
-    const mainPlayerOpacity = interpolate([1, 0]);
-    const miniPlayerOpacity = interpolate([0, 1]);
+    const albumArtSize = useAnimatedStyle(() => ({
+        width: imageSize.value,
+        height: imageSize.value,
+        transform: [{ translateX: imagePositionX.value }],
+    }));
+
+    const mainPlayerOpacity = useAnimatedStyle(() => ({
+        opacity: animation.value === 0 ? 1 : 0,
+    }));
+
+    const miniPlayerOpacity = useAnimatedStyle(() => ({
+        opacity: animation.value === height - miniPlayerHeight - insets.bottom - tabBarHeight ? 1 : 0,
+    }));
 
     const togglePlayPause = () => {
         setIsPlaying(prev => !prev);
     };
+
+    const previousSong = () => {
+        setCurrentSongIndex(prevIndex => (prevIndex - 1 + songs.length) % songs.length);
+    };
+
+    const nextSong = () => {
+        setCurrentSongIndex(prevIndex => (prevIndex + 1) % songs.length);
+    };
+
+    const toggleLike = () => {
+        setLikedSongs(prev => {
+            const newLikedSongs = new Set(prev);
+            const songId = songs[currentSongIndex].id;
+            if (newLikedSongs.has(songId)) {
+                newLikedSongs.delete(songId);
+            } else {
+                newLikedSongs.add(songId);
+            }
+            return newLikedSongs;
+        });
+    };
+
+    const isLiked = likedSongs.has(songs[currentSongIndex].id);
 
     return (
         <Animated.View
             {...panResponder.panHandlers}
             style={[
                 styles.container,
+                containerHeight,
                 {
-                    height: containerHeight,
                     bottom: isExpanded ? 0 : insets.bottom + tabBarHeight,
                     zIndex: isExpanded ? 1000 : 1,
                 }
             ]}
         >
             <LinearGradient
-                colors={['#1E1E1E', '#121212']}
+                colors={['#17153B', '#2E236C']}
                 style={StyleSheet.absoluteFill}
             >
                 {/* Main Player */}
-                <Animated.View style={[styles.mainPlayer, { opacity: mainPlayerOpacity }]}>
+                <Animated.View style={[styles.mainPlayer, mainPlayerOpacity]}>
                     <View style={styles.albumContainer}>
                         <Animated.Image
-                            source={{ uri: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' }}
-                            style={[styles.albumArt, {
-                                width: albumArtSize,
-                                height: albumArtSize,
-                                marginTop: albumArtMarginTop,
-                                transform: [{ translateX: imagePositionX }]
-                            }]}
+                            source={{ uri: songs[currentSongIndex].image }}
+                            style={[styles.albumArt, albumArtSize]}
                         />
                         <TouchableOpacity style={styles.loopIcon}>
                             <Ionicons name="repeat" size={32} color="white" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.likeIcon}>
-                            <Ionicons name="heart" size={32} color="white" />
+                        <TouchableOpacity
+                            style={[styles.likeIcon, { color: isLiked ? 'red' : 'white' }]}
+                            onPress={toggleLike}
+                        >
+                            <Ionicons name="heart" size={32} color={isLiked ? 'red' : 'white'} />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.title}>The Perfect Girl</Text>
-                    <Text style={styles.artist}>patrick bateman</Text>
+                    <Text style={styles.title}>{songs[currentSongIndex].title}</Text>
+                    <Text style={styles.artist}>{songs[currentSongIndex].artist}</Text>
                     <Slider
                         style={styles.progressBar}
                         minimumValue={0}
                         maximumValue={1}
                         value={progress}
                         onValueChange={setProgress}
-                        minimumTrackTintColor="#1DB954"
+                        minimumTrackTintColor="#C8ACD6"
                         maximumTrackTintColor="#555"
-                        thumbTintColor="#1DB954"
+                        thumbTintColor="#C8ACD6"
                     />
                     <View style={styles.timeContainer}>
                         <Text style={styles.timeText}>0:00</Text>
                         <Text style={styles.timeText}>3:30</Text>
                     </View>
-                    {/* Conditionally render play/pause button */}
                     {isExpanded && (
                         <View style={styles.controls}>
-                            <TouchableOpacity>
+                            <TouchableOpacity onPress={previousSong}>
                                 <Ionicons name="play-skip-back" size={32} color="white" />
                             </TouchableOpacity>
                             <TouchableOpacity onPress={togglePlayPause} style={styles.playPauseButton}>
                                 <Ionicons name={isPlaying ? "pause" : "play"} size={32} color="white" />
                             </TouchableOpacity>
-                            <TouchableOpacity>
+                            <TouchableOpacity onPress={nextSong}>
                                 <Ionicons name="play-skip-forward" size={32} color="white" />
                             </TouchableOpacity>
                         </View>
@@ -150,17 +176,17 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                 </Animated.View>
 
                 {/* Mini Player */}
-                <Animated.View style={[styles.miniPlayer, { opacity: miniPlayerOpacity }]}>
+                <Animated.View style={[styles.miniPlayer, miniPlayerOpacity]}>
                     <Image
-                        source={{ uri: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' }}
+                        source={{ uri: songs[currentSongIndex].image }}
                         style={styles.miniAlbumArt}
                     />
                     <View style={styles.miniInfo}>
-                        <Text style={styles.miniTitle}>The Perfect Girl</Text>
-                        <Text style={styles.miniArtist}>patrick bateman</Text>
+                        <Text style={styles.miniTitle}>{songs[currentSongIndex].title}</Text>
+                        <Text style={styles.miniArtist}>{songs[currentSongIndex].artist}</Text>
                     </View>
                     <TouchableOpacity onPress={togglePlayPause}>
-                        <Ionicons name={isPlaying ? "pause" : "play"} size={24} color="white" />
+                        <Ionicons name={isPlaying ? "pause" : "play"} size={40} color="white" />
                     </TouchableOpacity>
                 </Animated.View>
             </LinearGradient>
@@ -229,7 +255,7 @@ const styles = StyleSheet.create({
         marginTop: 30,
     },
     playPauseButton: {
-        backgroundColor: '#1DB954',
+        backgroundColor: '#433D8B',
         width: 64,
         height: 64,
         borderRadius: 32,
@@ -241,12 +267,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         height: miniPlayerHeight,
-        backgroundColor: '#121212',
+        backgroundColor: '#2E236C',
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
     },
     miniAlbumArt: {
         width: 50,
         height: 50,
-        borderRadius: 5,
+        borderRadius: 10,
     },
     miniInfo: {
         flex: 1,
@@ -258,7 +286,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     miniArtist: {
-        color: '#ccc',
+        color: '#C8ACD6',
         fontSize: 14,
     },
 });

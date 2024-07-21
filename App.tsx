@@ -13,7 +13,7 @@ import FavoritesScreen from './src/screens/FavoritesScreen';
 import PlayerScreen from './src/screens/player';
 
 const Tab = createBottomTabNavigator();
-const TAB_BAR_HEIGHT = 50; // Adjust this value based on your actual tab bar height
+const TAB_BAR_HEIGHT = 50;
 
 const App = () => {
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
@@ -22,7 +22,7 @@ const App = () => {
     <SafeAreaProvider>
       <NavigationContainer>
         <View style={styles.container}>
-          <StatusBar style="light" backgroundColor="#FF3B30" />
+          <StatusBar style="dark" backgroundColor="#17153B" />
           <Tab.Navigator
             screenOptions={({ route }) => ({
               tabBarIcon: ({ color, size }) => {
@@ -44,15 +44,20 @@ const App = () => {
 
                 return <FontAwesome name={iconName as any} size={size} color={color} />;
               },
-              tabBarActiveTintColor: route.name === 'Home' ? '#FF3B30' : '#FF6F61',
-              tabBarInactiveTintColor: 'gray',
+              tabBarActiveTintColor: route.name === 'Home' ? '#C8ACD6' : '#433D8B',
+              tabBarInactiveTintColor: 'lightgrey',
               tabBarStyle: {
-                backgroundColor: '#000000',
+                backgroundColor: '#17153B',
+                height: TAB_BAR_HEIGHT,
+                borderTopColor: 'transparent',
                 borderTopWidth: 0,
+                borderBottomLeftRadius: 30, // Added border radius
+                borderBottomRightRadius: 30, // Added border radius
+                overflow: 'hidden', // Ensure content doesn't overflow
               },
               tabBarShowLabel: false,
               headerStyle: {
-                backgroundColor: '#FF3B30',
+                backgroundColor: '#17153B',
               },
               headerTintColor: '#fff',
               headerTitleStyle: {
@@ -65,11 +70,12 @@ const App = () => {
               component={HomeScreen}
               options={{
                 headerStyle: {
-                  backgroundColor: '#FF3B30',
+                  backgroundColor: '#17153B',
                 },
                 headerTintColor: '#fff',
                 headerTitleStyle: {
                   fontWeight: 'bold',
+                  fontStyle: 'italic',
                 },
               }}
             />
@@ -90,6 +96,7 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000', // Ensure the background color matches the tab bar
   },
 });
 

@@ -8,10 +8,10 @@ const { width, height } = Dimensions.get('window');
 const HomePage = () => {
     return (
         <LinearGradient
-            colors={['#FF3B30', '#121212']} // Black gradient colors
+            colors={['#2E236C', '#17153B']} // Updated gradient colors
             style={styles.container}
         >
-            <StatusBar style="light" backgroundColor="#000000" />
+            <StatusBar style="light" backgroundColor="#17153B" />
             <View style={styles.content}>
                 <Text style={styles.title}>Welcome to My App</Text>
                 {/* Add your other components here */}
