@@ -1,15 +1,15 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Image, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity, Image, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 const albumSize = width - 80;
 const miniPlayerHeight = 60;
 
+// Sample data for multiple songs
 const songs = [
     { id: '1', title: 'The Perfect Girl', artist: 'patrick bateman', image: 'https://upload.wikimedia.org/wikipedia/en/5/52/American-psycho-patrick-bateman.jpg?20230727203932' },
     { id: '2', title: 'Song 2', artist: 'Artist 2', image: 'https://tse4.mm.bing.net/th?id=OIP.yQjTb5-bTqsSiAU9lmhyqAHaHa&pid=15.1' },
@@ -23,14 +23,15 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
     const [currentSongIndex, setCurrentSongIndex] = useState(0);
     const [likedSongs, setLikedSongs] = useState(new Set());
 
-    const animation = useSharedValue(isExpanded ? 0 : height - miniPlayerHeight);
-    const imageSize = useSharedValue(isExpanded ? albumSize : 50);
-    const imagePositionX = useSharedValue(isExpanded ? 0 : 20);
+    const animation = useRef(new Animated.Value(isExpanded ? 0 : height - miniPlayerHeight)).current;
+    const imageSize = useRef(new Animated.Value(isExpanded ? albumSize : 50)).current;
+    const imagePositionX = useRef(new Animated.Value(isExpanded ? 0 : 20)).current;
 
     const panResponder = useRef(
         PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
             onPanResponderRelease: (e, gestureState) => {
+                console.log('Gesture State:', gestureState);
                 if (gestureState.dy < -50) {
                     expandPlayer();
                 } else if (gestureState.dy > 50) {
@@ -46,12 +47,25 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
     ).current;
 
     const animatePlayer = useCallback((toValue) => {
-        animation.value = withSpring(toValue, { damping: 15, stiffness: 90 });
+        Animated.spring(animation, {
+            toValue,
+            useNativeDriver: false,
+            tension: 40,
+            friction: 8,
+        }).start();
     }, [animation]);
 
     const animateImage = useCallback((toSize, toX) => {
-        imageSize.value = withSpring(toSize, { damping: 15, stiffness: 90 });
-        imagePositionX.value = withSpring(toX, { damping: 15, stiffness: 90 });
+        Animated.parallel([
+            Animated.spring(imageSize, {
+                toValue: toSize,
+                useNativeDriver: false,
+            }).start(),
+            Animated.spring(imagePositionX, {
+                toValue: toX,
+                useNativeDriver: false,
+            }).start(),
+        ]);
     }, [imageSize, imagePositionX]);
 
     const minimizePlayer = useCallback(() => {
@@ -66,23 +80,18 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
         setIsExpanded(true);
     }, [animatePlayer, animateImage, albumSize]);
 
-    const containerHeight = useAnimatedStyle(() => ({
-        height: animation.value,
-    }));
+    const interpolate = useCallback((outputRange) =>
+        animation.interpolate({
+            inputRange: [0, height - miniPlayerHeight - insets.bottom - tabBarHeight],
+            outputRange,
+            extrapolate: 'clamp',
+        }), [animation, height, miniPlayerHeight, insets.bottom, tabBarHeight]);
 
-    const albumArtSize = useAnimatedStyle(() => ({
-        width: imageSize.value,
-        height: imageSize.value,
-        transform: [{ translateX: imagePositionX.value }],
-    }));
-
-    const mainPlayerOpacity = useAnimatedStyle(() => ({
-        opacity: animation.value === 0 ? 1 : 0,
-    }));
-
-    const miniPlayerOpacity = useAnimatedStyle(() => ({
-        opacity: animation.value === height - miniPlayerHeight - insets.bottom - tabBarHeight ? 1 : 0,
-    }));
+    const containerHeight = interpolate([height, miniPlayerHeight]);
+    const albumArtSize = imageSize;
+    const albumArtMarginTop = interpolate([0, 5]);
+    const mainPlayerOpacity = interpolate([1, 0]);
+    const miniPlayerOpacity = interpolate([0, 1]);
 
     const togglePlayPause = () => {
         setIsPlaying(prev => !prev);
@@ -116,8 +125,8 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
             {...panResponder.panHandlers}
             style={[
                 styles.container,
-                containerHeight,
                 {
+                    height: containerHeight,
                     bottom: isExpanded ? 0 : insets.bottom + tabBarHeight,
                     zIndex: isExpanded ? 1000 : 1,
                 }
@@ -128,11 +137,16 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                 style={StyleSheet.absoluteFill}
             >
                 {/* Main Player */}
-                <Animated.View style={[styles.mainPlayer, mainPlayerOpacity]}>
+                <Animated.View style={[styles.mainPlayer, { opacity: mainPlayerOpacity }]}>
                     <View style={styles.albumContainer}>
                         <Animated.Image
                             source={{ uri: songs[currentSongIndex].image }}
-                            style={[styles.albumArt, albumArtSize]}
+                            style={[styles.albumArt, {
+                                width: albumArtSize,
+                                height: albumArtSize,
+                                marginTop: albumArtMarginTop,
+                                transform: [{ translateX: imagePositionX }]
+                            }]}
                         />
                         <TouchableOpacity style={styles.loopIcon}>
                             <Ionicons name="repeat" size={32} color="white" />
@@ -160,6 +174,7 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                         <Text style={styles.timeText}>0:00</Text>
                         <Text style={styles.timeText}>3:30</Text>
                     </View>
+                    {/* Conditionally render play/pause button */}
                     {isExpanded && (
                         <View style={styles.controls}>
                             <TouchableOpacity onPress={previousSong}>
@@ -176,7 +191,7 @@ const PlayerScreen = ({ isExpanded, setIsExpanded, tabBarHeight }) => {
                 </Animated.View>
 
                 {/* Mini Player */}
-                <Animated.View style={[styles.miniPlayer, miniPlayerOpacity]}>
+                <Animated.View style={[styles.miniPlayer, { opacity: miniPlayerOpacity }]}>
                     <Image
                         source={{ uri: songs[currentSongIndex].image }}
                         style={styles.miniAlbumArt}
